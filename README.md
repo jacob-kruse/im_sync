@@ -16,4 +16,10 @@ Robotic Sensor Networks"*. I have included this research paper in the `/doc` fol
 **Paper Citation**  
 W. Luo and K. Sycara, “Voronoi-based coverage control with connectivity maintenance for robotic sensor networks,” in Proc. 2019 Int. Symp. on Multi-Robot and Multi-Agent Systems (MRS). IEEE, 2019.
 
-The main code for this repository is located ___. The scripts `voronoi.py` and `_` are the baselines, referring to the Standard Voronoi partitioning and the proposed partitioning from the research paper, respectively. My algorithm is `_`, and builds on the proposed algorithm by implementing a dynamic communication range. 
+The main code for this repository is located in the `/scripts` folder. Within this folder there are the `/coverage` and `/plotting` folders which contain code for different categories. 
+
+The `/coverage` folder contains the scripts `voronoi.py` and `connected_voronoi.py`, which provide the baselines for Standard Voronoi partitioning and the proposed partitioning from the research paper, respectively. My algorithm is `dynamic_connected_voronoi.py`, and builds on the proposed algorithm by implementing a dynamic communication range. 
+
+The `/plotting` folder contains a number of scripts that are used to plot the data acquired from runnning each coverage script. The main script, `plot_data.py`, plots all of the available data in a number of ways. You can also run the other scripts independently.
+
+The `/data` folder holds all of the ouptut data from running each coverage control script. The `/last` folder holds the most recent data from each coverage script. The `/archive` folder at the monment is empty, but will hold all of my experiemntal data once I finish the code. 
