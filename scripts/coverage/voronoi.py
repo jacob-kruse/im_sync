@@ -17,7 +17,7 @@ from rps.utilities.barrier_certificates import *
 from rps.utilities.misc import *
 from rps.utilities.controllers import *
 
-from utils import generate_gaussian_distribution
+from utils import generate_gaussian_distribution, generate_random_distribution
 
 # Simulation Variables
 # fmt: off
@@ -30,7 +30,6 @@ y_min = -1               # Upper bound of y coordinate
 y_max = 1                # Lower bound of x coordinate
 res = 0.05               # Resolution of coordinates
 kv = 1                   # Constant Gain for velocity controller
-
 
 max_range = np.sqrt(((x_max-x_min) ** 2) + ((y_max-y_min) ** 2))   # Calculate the maximum range to cover entire simulation
 Rc = max_range/4.0                                                 # Sets the static communication range for all of the robots
@@ -74,9 +73,8 @@ si_to_uni_dyn, uni_to_si_states = create_si_to_uni_mapping()
 fig, ax = plt.subplots()
 
 # Generate a distribution function for the environment that respresents communication ability
-X, Y, density = generate_gaussian_distribution(False)
-max_density = np.max(density)
-min_density = np.min(density)
+density, max_density = generate_gaussian_distribution(False)
+min_density = 0
 
 # Iterate for the amount defined
 for k in range(iterations):
@@ -135,9 +133,7 @@ for k in range(iterations):
         # fmt: on
 
         # Get the density value of each robot and modify the commmunication ranges accordingly
-        Rx = int((round(current_x[robots][0]/res)) + ((density.shape[0] - 1) / 2))
-        Ry = int((round(current_y[robots][0]/res)) + ((density.shape[1] - 1) / 2))
-        pose_density = density[Rx][Ry]
+        pose_density = density(current_x[robots][0], current_y[robots][0])
         range_constant = ((max_density - pose_density) / (max_density - min_density))
         comm_range = float(Rc * ((1 - range_diff) + (2 * range_diff * range_constant)))
         comm_ranges.append(comm_range)
@@ -208,7 +204,11 @@ for k in range(iterations):
     ax.clear()
 
     # Plot the distribution function
-    ax.pcolor(X, Y, density, shading="auto", zorder=-1)
+    x_vals = np.arange(x_min, x_max + res, res)
+    y_vals = np.arange(y_min, y_max + res, res)
+    X, Y = np.meshgrid(x_vals, y_vals, indexing='ij')
+    Z = density(X, Y)
+    ax.pcolor(X, Y, Z, shading="auto", zorder=-1)
 
     # Create a Voronoi diagram based on the robot positions
     points = np.array([current_x.flatten(), current_y.flatten()]).T
@@ -265,7 +265,7 @@ with open(output_path, mode="w", newline="") as file:
         writer.writerow([f"Iteration {index}", value])
     writer.writerow([])
     writer.writerow(["Density Array"])
-    for row in density:
+    for row in Z:
         writer.writerow([f"{val:.5f}" for val in row])
     writer.writerow([])
     writer.writerow(["X Array"])

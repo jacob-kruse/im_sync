@@ -121,7 +121,7 @@ def plot_poses(csv_file):
         actual_circle = Circle((final_x[index], final_y[index]), radius=comm_ranges[-1][index], fill=False, color=color, linewidth=1.5)
         ax.add_patch(actual_circle)
         if label == "Connectivity Maintenance Baseline":
-            ideal_circle = Circle((final_x[index], final_y[index]), radius=ideal_comm_range, fill=False, color="dimgray", linewidth=1.5)
+            ideal_circle = Circle((final_x[index], final_y[index]), radius=ideal_comm_range, fill=False, color="white", linewidth=1.5, linestyle="--")
             ax.add_patch(ideal_circle)
 
     for robot_id, data in robot_centroids.items():

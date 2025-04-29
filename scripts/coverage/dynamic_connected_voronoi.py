@@ -19,7 +19,7 @@ from rps.utilities.barrier_certificates import *
 from rps.utilities.misc import *
 from rps.utilities.controllers import *
 
-from utils import generate_gaussian_distribution
+from utils import generate_gaussian_distribution, generate_random_distribution
 
 # Simulation Variables
 # fmt: off
@@ -35,7 +35,7 @@ kv = 1                   # Constant Gain for velocity controller
 
 max_range = np.sqrt(((x_max-x_min) ** 2) + ((y_max-y_min) ** 2))   # Calculate the maximum range to cover entire simulation
 Rc = max_range/4.0                                                 # Sets the static communication range for all of the robots
-gamma = 1.5                                                        # Sets the constant that is used in the "h" calculation
+gamma = 1.0                                                        # Sets the constant that is used in the "h" calculation
 range_diff = 0.3                                                   # Determines how much the range can deviate
 convergence_threshold = 2e-3                                       # Threshold to determine if convergence has occurred
 initial_conditions = np.asarray([                                  # Sets the initial positions of the robots
@@ -61,6 +61,7 @@ total_ranges = []
 total_connectivity = []
 previous_x = None
 previous_y = None
+u_previous = None
 prev_comm_ranges = None
 converged_iteration = -1
 
@@ -76,9 +77,9 @@ si_to_uni_dyn, uni_to_si_states = create_si_to_uni_mapping()
 fig, ax = plt.subplots()
 
 # Generate a distribution function for the environment that respresents communication ability
-X, Y, density = generate_gaussian_distribution(False)
-max_density = np.max(density)
-min_density = np.min(density)
+density, max_density = generate_gaussian_distribution(False)
+min_density = 0
+# density, max_density, min_density = generate_random_distribution()
 
 # Iterate for the amount defined
 for k in range(iterations):
@@ -92,6 +93,7 @@ for k in range(iterations):
     # Instantiate calculation variables to zero
     H = 0
     comm_ranges = []
+    next_ranges = []
     w_v = np.zeros(N)
     A = np.zeros((N, N))
     D = np.zeros((N, N))
@@ -135,10 +137,9 @@ for k in range(iterations):
                                                       (abs(current_y[robots][0] - previous_y[robots][0]) ** 2)))
         # fmt: on
 
-        # Get the density value of each robot and modify the commmunication ranges accordingly
-        Rx = int((round(current_x[robots][0]/res)) + ((density.shape[0] - 1) / 2))
-        Ry = int((round(current_y[robots][0]/res)) + ((density.shape[1] - 1) / 2))
-        pose_density = density[Rx][Ry]
+        # Get the density value of the current robot's position, normalize its value, and calculate the communication range
+        pose_density = density(current_x[robots][0], current_y[robots][0])
+        # pose_density = density([current_x[robots][0], current_y[robots][0]])[0]
         range_constant = ((max_density - pose_density) / (max_density - min_density))
         comm_range = float(Rc * ((1 - range_diff) + (2 * range_diff * range_constant)))
         comm_ranges.append(comm_range)
@@ -154,18 +155,30 @@ for k in range(iterations):
             # Append the current centroid to the list
             cwi[:, robots] = np.array([c_x, c_y])
 
+        # Use the robot's previous control input to estimate the next density value for the derivative calculation
+        next_x = current_x[robots][0] + 0.033 * u_previous[0][robots] if u_previous is not None else current_x[robots][0]
+        next_y = current_y[robots][0] + 0.033 * u_previous[1][robots] if u_previous is not None else current_y[robots][0]
+        next_pose_density = density(next_x, next_y)
+        # next_pose_density = density([next_x, next_y])[0]
+        next_range_constant = ((max_density - next_pose_density) / (max_density - min_density))
+        next_range = float(Rc * ((1 - range_diff) + (2 * range_diff * next_range_constant)))
+        next_ranges.append(next_range)
+
     # Compute distances between robots
     robot_distances = cdist(np.array(x_si).T, np.array(x_si).T, 'euclidean')
 
     # Calculate and fill the weights array to calculate the MST
     for robot in range(N):
         for neighbor in range(N):
-            h = (comm_ranges[robot] ** 2 - robot_distances[robot][neighbor] ** 2)
-            range_change = comm_ranges[robot] - prev_comm_ranges[robot] if prev_comm_ranges else 0
+            min_comm_range = min(comm_ranges[robot], comm_ranges[neighbor])
+            h = (min_comm_range ** 2 - robot_distances[robot][neighbor] ** 2)
+            future_change = next_ranges[comm_ranges.index(min_comm_range)] - min_comm_range
+            past_change = min_comm_range - prev_comm_ranges[comm_ranges.index(min_comm_range)] if prev_comm_ranges else 0
+            range_change = (future_change + past_change) / (2 * 0.033)
             pose_diff = np.array(x_si).T[robot] - np.array(x_si).T[neighbor]
             velo_diff = u_desired[:, robot] - u_desired[:, neighbor]
             h_dot = 2 * comm_ranges[robot] * range_change - 2 * pose_diff @ velo_diff
-            weights[robot][neighbor] = -1 * (h_dot + gamma * h)
+            weights[robot][neighbor] = -1 * (h_dot + h)
     
     # Calculate the MST from the weights array and get the edges
     mst = minimum_spanning_tree(weights).toarray()
@@ -202,8 +215,10 @@ for k in range(iterations):
         min_comm_range = min(comm_ranges[edge[0]], comm_ranges[edge[1]])
         h = (min_comm_range ** 2 - robot_distances[edge[0]][edge[1]] ** 2)
         diff = np.array(x_si).T[edge[0]] - np.array(x_si).T[edge[1]]
-        range_change = comm_ranges[robot] - prev_comm_ranges[comm_ranges.index(min_comm_range)] if prev_comm_ranges else 0
-        constraint = 2 * diff @ u[:, edge[0]] <= -2 * comm_ranges[edge[0]] * range_change + 2 * diff @ u[:, edge[1]] + gamma * h
+        future_change = next_ranges[comm_ranges.index(min_comm_range)] - min_comm_range
+        past_change = min_comm_range - prev_comm_ranges[comm_ranges.index(min_comm_range)] if prev_comm_ranges else 0
+        range_change = (future_change + past_change) / (2 * 0.033)
+        constraint = 2 * diff @ u[:, edge[0]] <= 2 * min_comm_range * range_change + 2 * diff @ u[:, edge[1]] + gamma * h
         constraints.append(constraint)
     
     # Define the problem with the objective and constraints and solve for the robots velocity
@@ -213,9 +228,10 @@ for k in range(iterations):
     # Assign the robot velocities
     si_velocities = u.value if u.value is not None else u_desired
 
-    # Update the variables for the previous pose with the current pose to be used in the next calculation
+    # Update the variables for the previous value with the current value to be used in the next calculation
     previous_x = current_x
     previous_y = current_y
+    u_previous = u.value
 
     # Add the current iteration values to the global lists
     Cwi.append(cwi.tolist())
@@ -245,7 +261,14 @@ for k in range(iterations):
     ax.clear()
 
     # Plot the distribution function
-    ax.pcolor(X, Y, density, shading="auto", zorder=-1)
+    x_vals = np.arange(x_min, x_max + res, res)
+    y_vals = np.arange(y_min, y_max + res, res)
+    X, Y = np.meshgrid(x_vals, y_vals, indexing='ij')
+    Z = density(X, Y)
+    # points = np.column_stack((X.ravel(), Y.ravel()))
+    # Z_flat = density(points)
+    # Z = Z_flat.reshape(X.shape)
+    ax.pcolor(X, Y, Z, shading="auto", zorder=-1)
 
     # Create a Voronoi diagram based on the robot positions
     points = np.array([current_x.flatten(), current_y.flatten()]).T
@@ -311,7 +334,7 @@ with open(output_path, mode="w", newline="") as file:
         writer.writerow([f"Iteration {index}", value])
     writer.writerow([])
     writer.writerow(["Density Array"])
-    for row in density:
+    for row in Z:
         writer.writerow([f"{val:.5f}" for val in row])
     writer.writerow([])
     writer.writerow(["X Array"])
