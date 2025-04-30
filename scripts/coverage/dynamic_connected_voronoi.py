@@ -21,6 +21,7 @@ from rps.utilities.controllers import *
 
 from utils import generate_gaussian_distribution, generate_random_distribution
 
+
 def dynamic_connected_voronoi(density, max_density, min_density):
     # Simulation Variables
     # fmt: off
@@ -51,7 +52,6 @@ def dynamic_connected_voronoi(density, max_density, min_density):
         [-0.8, -0.25, 0],
         [1.3, -0.4, 0]
     ])
-    # fmt: on
 
     # Status and Performance Variables
     Cwi = []
@@ -68,6 +68,9 @@ def dynamic_connected_voronoi(density, max_density, min_density):
 
     # Instantiate Robotarium object
     r = robotarium.Robotarium(number_of_robots=N, sim_in_real_time=False, initial_conditions=initial_conditions[0:N].T, show_figure=False)
+    # fmt: on
+
+    # Close the initial figure that is opened by Robotarium
     plt.close(1)
 
     # Helper Functions for Simulation
@@ -111,7 +114,9 @@ def dynamic_connected_voronoi(density, max_density, min_density):
 
                 # Calculate the distance of each robot to the current point
                 for robots in range(N):
-                    distances[robots] = np.sqrt(np.square(ix - current_x[robots].item()) + np.square(iy - current_y[robots].item()))
+                    distances[robots] = np.sqrt(
+                        np.square(ix - current_x[robots].item()) + np.square(iy - current_y[robots].item())
+                    )
 
                 # Find the robot with the smallest distance
                 min_index = np.argmin(distances)
@@ -130,12 +135,12 @@ def dynamic_connected_voronoi(density, max_density, min_density):
             # fmt: off
             if previous_x is not None and previous_y is not None:
                 distance_traveled[robots] = float(np.sqrt((abs(current_x[robots][0] - previous_x[robots][0]) ** 2) +
-                                                        (abs(current_y[robots][0] - previous_y[robots][0]) ** 2)))
+                                                          (abs(current_y[robots][0] - previous_y[robots][0]) ** 2)))
             # fmt: on
 
             # Get the density value of the current robot's position, normalize its value, and calculate the communication range
             pose_density = density(current_x[robots][0], current_y[robots][0])
-            range_constant = ((max_density - pose_density) / (max_density - min_density))
+            range_constant = (max_density - pose_density) / (max_density - min_density)
             comm_range = float(Rc * ((1 - range_diff) + (2 * range_diff * range_constant)))
             comm_ranges.append(comm_range)
 
@@ -154,18 +159,18 @@ def dynamic_connected_voronoi(density, max_density, min_density):
             next_x = current_x[robots][0] + 0.033 * u_previous[0][robots] if u_previous is not None else current_x[robots][0]
             next_y = current_y[robots][0] + 0.033 * u_previous[1][robots] if u_previous is not None else current_y[robots][0]
             next_pose_density = density(next_x, next_y)
-            next_range_constant = ((max_density - next_pose_density) / (max_density - min_density))
+            next_range_constant = (max_density - next_pose_density) / (max_density - min_density)
             next_range = float(Rc * ((1 - range_diff) + (2 * range_diff * next_range_constant)))
             next_ranges.append(next_range)
 
         # Compute distances between robots
-        robot_distances = cdist(np.array(x_si).T, np.array(x_si).T, 'euclidean')
+        robot_distances = cdist(np.array(x_si).T, np.array(x_si).T, "euclidean")
 
         # Calculate and fill the weights array to calculate the MST
         for robot in range(N):
             for neighbor in range(N):
                 min_comm_range = min(comm_ranges[robot], comm_ranges[neighbor])
-                h = (min_comm_range ** 2 - robot_distances[robot][neighbor] ** 2)
+                h = min_comm_range**2 - robot_distances[robot][neighbor] ** 2
                 future_change = next_ranges[comm_ranges.index(min_comm_range)] - min_comm_range
                 past_change = min_comm_range - prev_comm_ranges[comm_ranges.index(min_comm_range)] if prev_comm_ranges else 0
                 range_change = (future_change + past_change) / (2 * 0.033)
@@ -173,7 +178,7 @@ def dynamic_connected_voronoi(density, max_density, min_density):
                 velo_diff = u_desired[:, robot] - u_desired[:, neighbor]
                 h_dot = 2 * comm_ranges[robot] * range_change - 2 * pose_diff @ velo_diff
                 weights[robot][neighbor] = -1 * (h_dot + h)
-        
+
         # Calculate the MST from the weights array and get the edges
         mst = minimum_spanning_tree(weights).toarray()
         edges = np.array(np.where(mst != 0)).T.tolist()
@@ -203,18 +208,18 @@ def dynamic_connected_voronoi(density, max_density, min_density):
 
         # Create an initial constraint that ensures the velocity is in same direction as the optimal velocity
         constraints = [cp.sum(cp.multiply(u, u_desired)) >= 0]
-        
+
         # Calculate additional constraints for the communication range
         for edge in edges:
             min_comm_range = min(comm_ranges[edge[0]], comm_ranges[edge[1]])
-            h = (min_comm_range ** 2 - robot_distances[edge[0]][edge[1]] ** 2)
+            h = min_comm_range**2 - robot_distances[edge[0]][edge[1]] ** 2
             diff = np.array(x_si).T[edge[0]] - np.array(x_si).T[edge[1]]
             future_change = next_ranges[comm_ranges.index(min_comm_range)] - min_comm_range
             past_change = min_comm_range - prev_comm_ranges[comm_ranges.index(min_comm_range)] if prev_comm_ranges else 0
             range_change = (future_change + past_change) / (2 * 0.033)
             constraint = 2 * diff @ u[:, edge[0]] <= 2 * min_comm_range * range_change + 2 * diff @ u[:, edge[1]] + gamma * h
             constraints.append(constraint)
-        
+
         # Define the problem with the objective and constraints and solve for the robots velocity
         prob = cp.Problem(objective, constraints)
         prob.solve()
@@ -257,7 +262,7 @@ def dynamic_connected_voronoi(density, max_density, min_density):
         # Plot the distribution function
         x_vals = np.arange(x_min, x_max + res, res)
         y_vals = np.arange(y_min, y_max + res, res)
-        X, Y = np.meshgrid(x_vals, y_vals, indexing='ij')
+        X, Y = np.meshgrid(x_vals, y_vals, indexing="ij")
         Z = density(X, Y)
         ax.pcolor(X, Y, Z, shading="auto", zorder=-1)
 
@@ -269,7 +274,7 @@ def dynamic_connected_voronoi(density, max_density, min_density):
         voronoi_plot_2d(vor, ax=ax, show_vertices=False, show_points=False, line_colors="black")
 
         # Plot robots' positions
-        colors = ['red', 'green', 'blue', 'purple', 'yellow']
+        colors = ["red", "green", "blue", "purple", "yellow"]
         ax.scatter(current_x.flatten(), current_y.flatten(), c=colors, marker="o")
 
         # Plot the ideal centroids
@@ -277,20 +282,22 @@ def dynamic_connected_voronoi(density, max_density, min_density):
 
         # Plot the communication ranges
         for robot in range(N):
-            actual_circle = Circle((current_x[robot], current_y[robot]), radius=comm_ranges[robot], fill=False, color=colors[robot], linestyle='--')
+            actual_circle = Circle(
+                (current_x[robot], current_y[robot]), radius=comm_ranges[robot], fill=False, color=colors[robot], linestyle="--"
+            )
             ax.add_patch(actual_circle)
 
         # Plot the communication connections
         for edge in edges:
             x_values = [current_x[edge[0]][0], current_x[edge[1]][0]]
             y_values = [current_y[edge[0]][0], current_y[edge[1]][0]]
-            ax.plot(x_values, y_values, color='dimgray', linestyle='--')
+            ax.plot(x_values, y_values, color="dimgray", linestyle="--")
 
         # After using comm_ranges for the last time, assign it to prev_comm_ranges
         prev_comm_ranges = comm_ranges
 
         # Set the aspect ratio so the circles are not stretched
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
 
         # Set plot limits and labels
         ax.set_xlim(x_min, x_max)
@@ -356,13 +363,15 @@ def dynamic_connected_voronoi(density, max_density, min_density):
 
     plt.close(1)
 
+
 def main():
-    # Generate a distribution function for the environment that respresents communication ability
+    # Generate a distribution function for the environment that represents communication ability
     # density, max_density, min_density = generate_gaussian_distribution(randomize=False)
     density, max_density, min_density = generate_random_distribution()
 
     # Call the coverage script
     dynamic_connected_voronoi(density, max_density, min_density)
+
 
 if __name__ == "__main__":
     main()

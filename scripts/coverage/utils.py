@@ -3,8 +3,8 @@
 import numpy as np
 from random import uniform
 
-def generate_gaussian_distribution(randomize=False):
 
+def generate_gaussian_distribution(randomize=False):
     # Generate values for the Gaussian if random argument is True
     if randomize:
         sigma = uniform(0.4, 1)
@@ -23,32 +23,32 @@ def generate_gaussian_distribution(randomize=False):
 
     # Define Gaussian distribution function
     def distribution_function(x, y):
-        
         # Convert passed coordinates to arrays and join the arrays
         x = np.asarray(x)
         y = np.asarray(y)
         coordinates = np.stack([x, y], axis=-1)
 
-        # Calculate the density value of the point 
+        # Calculate the density value of the point
         diff = coordinates - mu
         # exponent = -0.5 * np.dot(diff, np.dot(sigma_inv, diff))
-        exponent = -0.5 * np.einsum('...i,ij,...j->...', diff, sigma_inv, diff)
+        exponent = -0.5 * np.einsum("...i,ij,...j->...", diff, sigma_inv, diff)
         density = normalizer * np.exp(exponent)
         return density
-    
+
     # Calculate the maximum and minimum density
     max_density = distribution_function(mu[0], mu[1])
     min_density = 0
-    
+
     # Return the generated function so that other scripts can pass coordinates
     return distribution_function, max_density, min_density
+
 
 def generate_random_distribution():
     # Define random variables for generated function
     freq_x = np.random.uniform(0.5, 2.0)
     freq_y = np.random.uniform(0.5, 2.0)
-    phase_x = np.random.uniform(0, 2*np.pi)
-    phase_y = np.random.uniform(0, 2*np.pi)
+    phase_x = np.random.uniform(0, 2 * np.pi)
+    phase_y = np.random.uniform(0, 2 * np.pi)
     amplitude = np.random.uniform(0.5, 1.0)
 
     # Define the maximum and minimum values of the function in order to normalize in main script

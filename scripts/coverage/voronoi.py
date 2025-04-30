@@ -19,6 +19,7 @@ from rps.utilities.controllers import *
 
 from utils import generate_gaussian_distribution, generate_random_distribution
 
+
 def voronoi(density, max_density, min_density):
     # Simulation Variables
     # fmt: off
@@ -48,7 +49,6 @@ def voronoi(density, max_density, min_density):
         [-0.8, -0.25, 0],
         [1.3, -0.4, 0]
     ])
-    # fmt: on
 
     # Status and Performance Variables
     Cwi = []
@@ -59,11 +59,13 @@ def voronoi(density, max_density, min_density):
     total_connectivity = []
     previous_x = None
     previous_y = None
-    prev_comm_ranges = None
     converged_iteration = -1
 
     # Instantiate Robotarium object
     r = robotarium.Robotarium(number_of_robots=N, sim_in_real_time=False, initial_conditions=initial_conditions[0:N].T, show_figure=False)
+    # fmt: on
+
+    # Close the initial figure that is opened by Robotarium
     plt.close(1)
 
     # Helper Functions for Simulation
@@ -90,8 +92,6 @@ def voronoi(density, max_density, min_density):
         D = np.zeros((N, N))
         c_v = np.zeros((N, 2))
         cwi = np.zeros((2, N))
-        weights = np.zeros((N, N))
-        u_desired = np.zeros((2, N))
         distance_traveled = np.zeros(N)
         si_velocities = np.zeros((2, N))
 
@@ -107,7 +107,9 @@ def voronoi(density, max_density, min_density):
 
                 # Calculate the distance of each robot to the current point
                 for robots in range(N):
-                    distances[robots] = np.sqrt(np.square(ix - current_x[robots].item()) + np.square(iy - current_y[robots].item()))
+                    distances[robots] = np.sqrt(
+                        np.square(ix - current_x[robots].item()) + np.square(iy - current_y[robots].item())
+                    )
 
                 # Find the robot with the smallest distance
                 min_index = np.argmin(distances)
@@ -126,12 +128,12 @@ def voronoi(density, max_density, min_density):
             # fmt: off
             if previous_x is not None and previous_y is not None:
                 distance_traveled[robots] = float(np.sqrt((abs(current_x[robots][0] - previous_x[robots][0]) ** 2) +
-                                                        (abs(current_y[robots][0] - previous_y[robots][0]) ** 2)))
+                                                          (abs(current_y[robots][0] - previous_y[robots][0]) ** 2)))
             # fmt: on
 
-            # Get the density value of each robot and modify the commmunication ranges accordingly
+            # Get the density value of each robot and modify the communication ranges accordingly
             pose_density = density(current_x[robots][0], current_y[robots][0])
-            range_constant = ((max_density - pose_density) / (max_density - min_density))
+            range_constant = (max_density - pose_density) / (max_density - min_density)
             comm_range = float(Rc * ((1 - range_diff) + (2 * range_diff * range_constant)))
             comm_ranges.append(comm_range)
 
@@ -147,7 +149,7 @@ def voronoi(density, max_density, min_density):
                 cwi[:, robots] = np.array([c_x, c_y])
 
         # Compute distances between robots
-        robot_distances = cdist(np.array(x_si).T, np.array(x_si).T, 'euclidean')
+        robot_distances = cdist(np.array(x_si).T, np.array(x_si).T, "euclidean")
 
         # Calculate the adjacency and diagonal matrix
         row_index = 0
@@ -170,7 +172,7 @@ def voronoi(density, max_density, min_density):
         previous_x = current_x
         previous_y = current_y
 
-        # Create blank edges array for data 
+        # Create blank edges array for data
         edges = []
 
         # Add the current iteration values to the global lists
@@ -203,7 +205,7 @@ def voronoi(density, max_density, min_density):
         # Plot the distribution function
         x_vals = np.arange(x_min, x_max + res, res)
         y_vals = np.arange(y_min, y_max + res, res)
-        X, Y = np.meshgrid(x_vals, y_vals, indexing='ij')
+        X, Y = np.meshgrid(x_vals, y_vals, indexing="ij")
         Z = density(X, Y)
         ax.pcolor(X, Y, Z, shading="auto", zorder=-1)
 
@@ -215,7 +217,7 @@ def voronoi(density, max_density, min_density):
         voronoi_plot_2d(vor, ax=ax, show_vertices=False, show_points=False, line_colors="black")
 
         # Plot robots' positions
-        colors = ['red', 'green', 'blue', 'purple', 'yellow']
+        colors = ["red", "green", "blue", "purple", "yellow"]
         ax.scatter(current_x.flatten(), current_y.flatten(), c=colors, marker="o")
 
         # Plot the ideal centroids
@@ -223,11 +225,13 @@ def voronoi(density, max_density, min_density):
 
         # Plot the communication ranges
         for robot in range(N):
-            actual_circle = Circle((current_x[robot], current_y[robot]), radius=comm_ranges[robot], fill=False, color=colors[robot], linestyle='--')
+            actual_circle = Circle(
+                (current_x[robot], current_y[robot]), radius=comm_ranges[robot], fill=False, color=colors[robot], linestyle="--"
+            )
             ax.add_patch(actual_circle)
 
         # Set the aspect ratio so the circles are not stretched
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
 
         # Set plot limits and labels
         ax.set_xlim(x_min, x_max)
@@ -293,13 +297,15 @@ def voronoi(density, max_density, min_density):
 
     plt.close(1)
 
+
 def main():
-    # Generate a distribution function for the environment that respresents communication ability
+    # Generate a distribution function for the environment that represents communication ability
     # density, max_density, min_density = generate_gaussian_distribution(randomize=False)
     density, max_density, min_density = generate_random_distribution()
 
     # Call the coverage script
     voronoi(density, max_density, min_density)
+
 
 if __name__ == "__main__":
     main()
