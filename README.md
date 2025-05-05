@@ -5,7 +5,7 @@
 This package contains all of the code for my Final Project in CSCI 8535: Multi Robot Systems
 
 ### Project Description
-![](img/Project_Description.png)
+![](media/Project_Description.png)
 
 The paper I chose to extend to satisfy the project requirements is titled *"Voronoi-based Coverage Control with Connectivity Maintenance for
 Robotic Sensor Networks"*. I have included this research paper in the `/doc` folder of this repository, and it can be viewed at the link below.  
@@ -13,6 +13,14 @@ Robotic Sensor Networks"*. I have included this research paper in the `/doc` fol
 
 **Paper Citation**  
 W. Luo and K. Sycara, “Voronoi-based coverage control with connectivity maintenance for robotic sensor networks,” in Proc. 2019 Int. Symp. on Multi-Robot and Multi-Agent Systems (MRS). IEEE, 2019.
+
+The final report I completed for this project is located in the `/doc` folder of this repository and can be viewed at the link below.  
+[View Final Report PDF](https://github.com/jacob-kruse/im_sync/blob/main/doc/Final_Report.pdf)
+
+### Demo Video
+[![](media/Preview.gif)](media/Demo_Video.mp4)
+![](media/Demo_Video.mp4)
+The above shows a preview for the demo video. The video provides a demonstration of my extension with comparisons to both baselines in a randomly generated scenario. Click the preview above to watch the full demo video.
 
 ### Main Code
 The main code for this repository is located in the `/scripts` folder. Within this folder there are the `/coverage` and `/plotting` folders which contain code for different categories.
