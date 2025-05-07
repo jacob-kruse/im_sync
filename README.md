@@ -29,5 +29,15 @@ The `/coverage` folder contains the scripts `voronoi.py` and `connected_voronoi.
 
 The `/plotting` folder contains a number of scripts that are used to plot the data acquired from running each coverage script. The main script, `plot_data.py`, plots all of the available data in a number of ways. You can also run the other scripts independently.
 
+In order to run these scripts, you need to install the required Python environment. This is described by the `environment.yml` in the root directory and can be installed if you have Anaconda using the following command. 
+
+    conda env create -f environment.yml
+
+This environment will be createed with the name "im_sync". To activate the environment use the following command.
+
+    conda activate im_sync
+
+Feel free to change the name of this environment by going to the `environment.yml` file and modifying the name in the first line. Make sure to adapt the command above accordingly.
+
 ### Coverage Script Data
 The `/data` folder holds all of the data that is collected from running each coverage control script. The `/last` folder holds the most recent output file from each coverage script. The `/archive` folder holds all of the experimental data for past runs of each method on the same environment. If you wish to keep the data collected from a run, make sure to move it into the `/archive` folder before running the coverage scripts again because they will replace the previous output file in the `/last` folder.
